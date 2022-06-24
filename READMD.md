@@ -25,3 +25,12 @@
     y: Math.sin(angle),
   };
 ```
+
+## Math.hypto(xDiff,yDiff);
+
+- 두 좌표 사이 거리를 구한다 좌표 중심의 거리다.
+- 그러므로 두 원간의 거리를 구하려면 반지름을 각각 빼줘야 한다
+  ```
+    const dist = Math.hypot(es[i].x - ps[j].x, es[i].y - ps[j].y);
+    cosnt realDist = dist - esRadius - psRadius
+  ```

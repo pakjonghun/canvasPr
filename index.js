@@ -43,35 +43,67 @@ const y = canvas.height / 2;
 
 const player = new Player({ x, y, radius: 30, color: "blue" });
 const ps = [];
-
 const es = [];
 
 function addEnemy() {
   setInterval(() => {
-    const r = Math.atan2(canvas.height / 2 - 100, canvas.width / 2 - 100);
+    const radius = Math.random() * 20 + 10;
+    let x;
+    let y;
+
+    if (Math.random() <= 0.5) {
+      x = Math.random() <= 0.5 ? canvas.width + radius : 0 - radius;
+      y = Math.random() * canvas.height;
+    } else {
+      x = Math.random() * canvas.width;
+      y = Math.random() <= 0.5 ? canvas.height + radius : 0 - radius;
+    }
+
+    const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x);
+    const velocity = { x: Math.cos(angle), y: Math.sin(angle) };
+
     es.push(
       new P({
-        x: 100,
-        y: 100,
-        radius: 30,
-        velocity: { x: Math.cos(r), y: Math.sin(r) },
+        x,
+        y,
+        radius,
+        velocity,
       })
     );
   }, 1000);
 }
 
 addEnemy();
-
+let animationId;
 function animate() {
-  requestAnimationFrame(animate);
+  animationId = requestAnimationFrame(animate);
   c.clearRect(0, 0, canvas.width, canvas.height);
   player.draw();
+
   for (const p of ps) {
     p.update();
   }
 
-  for (const e of es) {
-    e.update();
+  for (let i = 0; i < es.length; i++) {
+    if (
+      Math.hypot(es[i].x - player.x, es[i].y - player.y) -
+        player.radius -
+        es[i].radius <
+      1
+    ) {
+      cancelAnimationFrame(animationId);
+    }
+
+    for (let j = 0; j < ps.length; j++) {
+      const dist = Math.hypot(es[i].x - ps[j].x, es[i].y - ps[j].y);
+
+      if (dist - es[i].radius - ps[j].radius < 1) {
+        ps.splice(j, 1);
+        es.splice(i, 1);
+      }
+    }
+
+    if (es[i]) es[i].update();
   }
 }
 
@@ -90,7 +122,7 @@ window.addEventListener("click", (event) => {
     x,
     y,
     radius: 10,
-    color: "green",
+    color: "blue",
     velocity,
   });
   console.log(angle);
