@@ -76,16 +76,27 @@ class MoviePlayer extends Player {
 
   update() {
     this.draw();
-    this.velocity.x *= this.frictinon;
-    this.velocity.y *= this.frictinon;
 
-    if (this.x + this.radius + this.velocity.x <= canvas.width) {
+    if (
+      this.x + this.radius + this.velocity.x <= canvas.width &&
+      this.x - this.radius + this.velocity.x >= 0
+    ) {
       this.x += this.velocity.x;
     } else {
       this.velocity.x = 0;
     }
 
-    this.y += this.velocity.y;
+    if (
+      this.y + this.velocity.y + this.radius <= canvas.height &&
+      this.y + this.velocity.y - this.radius >= 0
+    ) {
+      this.y += this.velocity.y;
+    } else {
+      this.velocity.y = 0;
+    }
+
+    this.velocity.x *= this.frictinon;
+    this.velocity.y *= this.frictinon;
   }
 }
 
@@ -123,9 +134,43 @@ class P extends Player {
   constructor({ x, y, radius, color, velocity }) {
     super({ x, y, radius, color });
     this.velocity = velocity;
+    this.center = { x, y };
+    this.radian = 0;
+    const random = Math.random();
+    if (random <= 0.5) {
+      this.type = "homing";
+    } else {
+      this.type = "ring";
+    }
   }
 
   update() {
+    this.draw();
+    this.x += this.velocity.x;
+    this.y += this.velocity.y;
+  }
+
+  pPupdate() {
+    if (this.type == "homing") {
+      const a = Math.atan2(player.y - this.y, player.x - this.x);
+      this.velocity.x = Math.cos(a);
+      this.velocity.y = Math.sin(a);
+    }
+
+    if (this.type == "ring") {
+      this.radian += 0.1;
+      const a = Math.atan2(player.y - this.y, player.x - this.x);
+      this.velocity.x = Math.cos(a);
+      this.velocity.y = Math.sin(a);
+      this.center.x += this.velocity.x;
+      this.center.y += this.velocity.y;
+      this.x = this.center.x + Math.cos(this.radian) * 30;
+      this.y = this.center.y + Math.sin(this.radian) * 30;
+
+      this.draw();
+      return;
+    }
+
     this.draw();
     this.x += this.velocity.x;
     this.y += this.velocity.y;
@@ -201,7 +246,7 @@ function animate() {
   }
 
   for (let i = es.length - 1; i >= 0; i--) {
-    es[i].update();
+    es[i].pPupdate();
 
     if (
       es[i].x + es[i].radius < 0 ||
