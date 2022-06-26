@@ -35,3 +35,107 @@ Math를 써먹을 곳이 이렇게 많다니... 많이 놀라웠고 신기했다
     const dist = Math.hypot(es[i].x - ps[j].x, es[i].y - ps[j].y);
     cosnt realDist = dist - esRadius - psRadius
   ```
+
+## 회전하는 구체 그리기
+
+- 0 부터 0.1씩 증가하는 라디안을 만든다
+- 이 라디안의 사인, 코사인이 x,y 가 원을 그리는 방향이다.
+
+  ```
+    radian = 0;
+
+    //이 메서드는 계속 재귀로 실행된다.
+    paint(){
+      this.radian+=0.1
+      const x = Math.cos(this.radian);
+      const y = Math.sin(this.radian);
+    }
+  ```
+
+- 별도로 목적지로 꾸준히 이동하는 좌표를 멤버로 둔다
+
+  ```
+    radian = 0;
+
+    paint(){
+      this.radian+=0.1
+      const x = Math.cos(this.radian);
+      const y = Math.sin(this.radian);
+
+      this.destination ={x:1,y:2} //1,2는 샘픔 목적지
+      this.destination.x += this.velocity.x; //목적지로 계속 다가간다.
+      this.destination.y += this.velocity.y;
+    }
+
+  ```
+
+- 최종적으로 움직이는 좌표는 이 목적지로 가는 좌표를 주변으로 회전하는 좌표가 된다.
+
+  ```
+    radian = 0;
+
+    paint(){
+      this.radian += 0.1
+      const x = Math.cos(this.radian);
+      const y = Math.sin(this.radian);
+
+      this.destination ={x:1,y:2} //1,2는 샘픔
+      this.destination.x += this.velocity.x;
+      this.destination.y += this.velocity.y;
+
+      //30은 회전반경이 된다.
+      const finalX = this.center.x + x*30;
+      const finalY = this.center.y + y*30;
+    }
+  ```
+
+## 캔버스에서 이미지 그리기
+
+- 이미지객체를 만들어서 소스를 넣어주고
+- drawImage 를 실행시켜주면된다.
+
+```
+  this.image = new Image();
+  this.image.src="./img/img.png"
+
+  //(arg1:이미지 객체, x 위치, y 위치)
+  c.drawImage(this.img, this.position.x, this.position.y);
+```
+
+## 캔버스에서 이미지 회젼시키기
+
+- 라디안을 회전을 위해서 계속 0.01씩 증가 시켜준다.
+- 캔버스를 이미지가 있는 곳으로 떙겨준다.
+- rotate 를 실행시키고
+- 다시 캔버스를 원위치로 갖다 놓는다.
+
+```
+  this.radian = 0;
+  this.radian+=0.01;
+
+  c.save()
+  c.translate(x,y)
+  c.rotate(this.radian)
+  c.translate(-x,-y)
+
+  //돌린 다음에 드로우 해줘야 한다
+  //다른 속성도 마찬가지로 다 적요애 해 주고 draw 해줘야 함
+  c.drawImage(this.img, this.position.x, this.position.y);
+  c.restore()
+
+
+  //깜빡이는 이미지 예시
+  c.save();
+  c.globalAlpha = this.alpha;
+  c.translate(
+    this.position.x + this.img.width / 2,
+    this.position.y + this.img.height / 2
+  );
+  c.rotate(this.radians);
+  c.translate(
+    -this.position.x - this.img.width / 2,
+    -this.position.y - this.img.height / 2
+  );
+  c.drawImage(this.img, this.position.x, this.position.y);
+  c.restore();
+```

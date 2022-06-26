@@ -5,6 +5,7 @@ const gameoveScore = document.getElementById("gameoverScore");
 const restart = document.getElementById("restart");
 const start = document.getElementById("start");
 let intervalId;
+let powerIntervalId;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -13,6 +14,7 @@ const friction = 0.98;
 const c = canvas.getContext("2d");
 
 function init() {
+  powerUps = [];
   ps = [];
   es = [];
   particles = [];
@@ -25,6 +27,8 @@ start.addEventListener("click", () => {
   init();
   animate();
   addEnemy();
+
+  addPowerUp();
   gsap.to("#start", {
     opacity: 0,
     scale: 0.3,
@@ -38,6 +42,8 @@ restart.addEventListener("click", () => {
   init();
   animate();
   addEnemy();
+
+  addPowerUp();
   gsap.to("#gameover", {
     opacity: 0,
     scale: 0.3,
@@ -47,136 +53,6 @@ restart.addEventListener("click", () => {
   });
 });
 
-class Player {
-  x;
-  y;
-  radius;
-  color;
-  constructor({ x, y, radius, color }) {
-    this.x = x;
-    this.y = y;
-    this.radius = radius;
-    this.color = color;
-  }
-
-  draw() {
-    c.beginPath();
-    c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-    c.fillStyle = this.color;
-    c.fill();
-  }
-}
-
-class MoviePlayer extends Player {
-  frictinon = 0.96;
-  velocity = { x: 0, y: 0 };
-  constructor({ x, y, radius, color }) {
-    super({ x, y, radius, color });
-  }
-
-  update() {
-    this.draw();
-
-    if (
-      this.x + this.radius + this.velocity.x <= canvas.width &&
-      this.x - this.radius + this.velocity.x >= 0
-    ) {
-      this.x += this.velocity.x;
-    } else {
-      this.velocity.x = 0;
-    }
-
-    if (
-      this.y + this.velocity.y + this.radius <= canvas.height &&
-      this.y + this.velocity.y - this.radius >= 0
-    ) {
-      this.y += this.velocity.y;
-    } else {
-      this.velocity.y = 0;
-    }
-
-    this.velocity.x *= this.frictinon;
-    this.velocity.y *= this.frictinon;
-  }
-}
-
-class Partical {
-  constructor({ x, y, radius, color, velocity }) {
-    this.x = x;
-    this.y = y;
-    this.radius = radius;
-    this.color = color;
-    this.velocity = velocity;
-    this.alpha = 1;
-  }
-
-  draw() {
-    c.save();
-    c.globalAlpha = this.alpha;
-    c.beginPath();
-    c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-    c.fillStyle = this.color;
-    c.fill();
-    c.restore();
-  }
-
-  update() {
-    this.draw();
-    this.velocity.x *= friction;
-    this.velocity.y *= friction;
-    this.x += this.velocity.x;
-    this.y += this.velocity.y;
-    this.alpha -= 0.01;
-  }
-}
-
-class P extends Player {
-  constructor({ x, y, radius, color, velocity }) {
-    super({ x, y, radius, color });
-    this.velocity = velocity;
-    this.center = { x, y };
-    this.radian = 0;
-    const random = Math.random();
-    if (random <= 0.5) {
-      this.type = "homing";
-    } else {
-      this.type = "ring";
-    }
-  }
-
-  update() {
-    this.draw();
-    this.x += this.velocity.x;
-    this.y += this.velocity.y;
-  }
-
-  pPupdate() {
-    if (this.type == "homing") {
-      const a = Math.atan2(player.y - this.y, player.x - this.x);
-      this.velocity.x = Math.cos(a);
-      this.velocity.y = Math.sin(a);
-    }
-
-    if (this.type == "ring") {
-      this.radian += 0.1;
-      const a = Math.atan2(player.y - this.y, player.x - this.x);
-      this.velocity.x = Math.cos(a);
-      this.velocity.y = Math.sin(a);
-      this.center.x += this.velocity.x;
-      this.center.y += this.velocity.y;
-      this.x = this.center.x + Math.cos(this.radian) * 30;
-      this.y = this.center.y + Math.sin(this.radian) * 30;
-
-      this.draw();
-      return;
-    }
-
-    this.draw();
-    this.x += this.velocity.x;
-    this.y += this.velocity.y;
-  }
-}
-
 const x = canvas.width / 2;
 const y = canvas.height / 2;
 
@@ -184,6 +60,40 @@ let player = new MoviePlayer({ x, y, radius: 30, color: "white" });
 let ps = [];
 let es = [];
 let particles = [];
+let powerUps = [];
+
+function addPowerUp() {
+  const interval = 5000;
+
+  powerIntervalId = setInterval(() => {
+    const chance3 = Math.random();
+    let x;
+    let y;
+    let vx;
+    let vy;
+
+    if (chance3 <= 0.5) {
+      const chance = Math.random();
+      x = chance <= 0.5 ? canvas.width : 0;
+      y = Math.random() * canvas.height;
+    } else {
+      const chance2 = Math.random();
+      x = Math.random() * canvas.width;
+      y = chance2 <= 0.5 ? 0 : canvas.height;
+    }
+
+    const angle = Math.atan2(player.y - y, player.x - x);
+    vx = Math.cos(angle);
+    vy = Math.sin(angle);
+
+    const powerUp = new PowerUp({
+      position: { x, y },
+      velocity: { x: vx, y: vy },
+    });
+
+    powerUps.push(powerUp);
+  }, 1000);
+}
 
 function addEnemy() {
   intervalId = setInterval(() => {
@@ -222,6 +132,11 @@ function animate() {
   c.fillStyle = "rgba(0, 0, 0, 0.1)";
   c.fillRect(0, 0, canvas.width, canvas.height);
   player.update();
+
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    powerUps[i].update();
+  }
+
   for (let i = particles.length - 1; i >= 0; i--) {
     if (particles[i].alpha <= 0) {
       particles.splice(i, 1);
@@ -249,10 +164,10 @@ function animate() {
     es[i].pPupdate();
 
     if (
-      es[i].x + es[i].radius < 0 ||
-      es[i] - es[i].radius > canvas.width ||
-      es[i].y + es[i].radius < 0 ||
-      es[i].y - es[i].radius > canvas.height
+      es[i].x + es[i].radius * 2 < 0 ||
+      es[i].x - es[i].radius * 2 > canvas.width ||
+      es[i].y + es[i].radius * 2 < 0 ||
+      es[i].y - es[i].radius * 2 > canvas.height
     ) {
       es.splice(i, 1);
       continue;
@@ -265,6 +180,7 @@ function animate() {
       1
     ) {
       cancelAnimationFrame(animationId);
+      clearInterval(powerIntervalId);
       clearInterval(intervalId);
 
       gsap.fromTo(
