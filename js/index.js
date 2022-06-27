@@ -4,16 +4,84 @@ const gameover = document.getElementById("gameover");
 const gameoveScore = document.getElementById("gameoverScore");
 const restart = document.getElementById("restart");
 const start = document.getElementById("start");
+const mute = document.getElementById("mute");
+const soundPlay = document.getElementById("soundPlay");
+
+let onlyStart = true;
 let intervalId;
 let powerIntervalId;
+let machineGunId;
+let frame = 0;
+let isGameStart = false;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+const mouseDirection = {
+  x: 0,
+  y: 0,
+};
 const friction = 0.98;
 
 const c = canvas.getContext("2d");
 
+mute.addEventListener("click", () => {
+  background.pause();
+  shootAudio.mute(true);
+  damageAudio.mute(true);
+  explode.mute(true);
+  death.mute(true);
+  powerUp.mute(true);
+  select.mute(true);
+  mute.style.display = "none";
+  soundPlay.style.display = "block";
+});
+
+soundPlay.addEventListener("click", () => {
+  background.play();
+  shootAudio.mute(false);
+  damageAudio.mute(false);
+  explode.mute(false);
+  death.mute(false);
+  powerUp.mute(false);
+  select.mute(false);
+  mute.style.display = "block";
+  soundPlay.style.display = "none";
+});
+
+function createScore({ top, left, score }) {
+  const ele = document.createElement("label");
+  ele.innerText = score;
+  ele.style.position = "absolute";
+  ele.style.color = "white";
+  ele.style.top = `${top}px`;
+  ele.style.left = `${left}px`;
+  ele.style.userSelect = "none";
+  document.body.appendChild(ele);
+
+  gsap.to(ele, {
+    opacity: 0,
+    y: -30,
+    duration: 0.9,
+    onComplete: () => ele.parentNode.removeChild(ele),
+  });
+}
+
 function init() {
+  background.play();
+  isGameStart = true;
+  frame = 0;
+  const spacing = 30;
+  for (let x = 0; x < canvas.width + spacing; x += spacing) {
+    for (let y = 0; y < canvas.height + spacing; y += spacing) {
+      const back = new Background({
+        position: { x, y },
+        radius: 3,
+        color: "green",
+      });
+      backgrounds.push(back);
+    }
+  }
+
   powerUps = [];
   ps = [];
   es = [];
@@ -24,6 +92,7 @@ function init() {
 }
 
 start.addEventListener("click", () => {
+  select.play();
   init();
   animate();
   addEnemy();
@@ -39,6 +108,8 @@ start.addEventListener("click", () => {
 });
 
 restart.addEventListener("click", () => {
+  select.play();
+
   init();
   animate();
   addEnemy();
@@ -61,6 +132,7 @@ let ps = [];
 let es = [];
 let particles = [];
 let powerUps = [];
+let backgrounds = [];
 
 function addPowerUp() {
   const interval = 5000;
@@ -83,8 +155,8 @@ function addPowerUp() {
     }
 
     const angle = Math.atan2(player.y - y, player.x - x);
-    vx = Math.cos(angle);
-    vy = Math.sin(angle);
+    vx = Math.cos(angle) * 3;
+    vy = Math.sin(angle) * 3;
 
     const powerUp = new PowerUp({
       position: { x, y },
@@ -92,7 +164,7 @@ function addPowerUp() {
     });
 
     powerUps.push(powerUp);
-  }, 1000);
+  }, interval);
 }
 
 function addEnemy() {
@@ -128,13 +200,75 @@ function addEnemy() {
 let animationId;
 let s = 0;
 function animate() {
+  for (const back of backgrounds) {
+    back.draw();
+
+    const dist = Math.hypot(
+      back.position.x - player.x,
+      back.position.y - player.y
+    );
+
+    if (dist < 100) back.alpha = 1;
+    if (dist < 50) back.alpha = 0;
+    if (back.alpha >= 0.15 && dist >= 100) back.alpha -= 0.05;
+  }
+
+  frame++;
   animationId = requestAnimationFrame(animate);
   c.fillStyle = "rgba(0, 0, 0, 0.1)";
   c.fillRect(0, 0, canvas.width, canvas.height);
   player.update();
 
   for (let i = powerUps.length - 1; i >= 0; i--) {
+    const poserUpPosition = powerUps[i].position;
+    if (
+      poserUpPosition.y < 0 ||
+      poserUpPosition.x < 0 ||
+      poserUpPosition.x > canvas.width ||
+      poserUpPosition.y > canvas.height
+    ) {
+      powerUps.splice(i, 1);
+    }
+
     powerUps[i].update();
+
+    const position = powerUps[i].position;
+    const img = powerUps[i].img;
+
+    if (
+      Math.hypot(position.x - player.x, position.y - player.y) -
+        img.width / 2 -
+        player.radius <
+      1
+    ) {
+      powerUp.play();
+      powerUps.splice(i, 1);
+      player.powerUp = "machineGun";
+      player.color = "yellow";
+      setTimeout(() => {
+        player.powerUp = "";
+        player.color = "white";
+      }, 3000);
+    }
+  }
+
+  if (player.powerUp === "machineGun") {
+    if (!(frame % 8)) {
+      const angle = Math.atan2(
+        mouseDirection.y - player.y,
+        mouseDirection.x - player.x
+      );
+
+      const newP = new P({
+        x: player.x,
+        y: player.y,
+        color: "red",
+        radius: 10,
+        velocity: { x: Math.cos(angle) * 10, y: Math.sin(angle) * 10 },
+      });
+      shootAudio.play();
+      ps.push(newP);
+    }
   }
 
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -179,7 +313,10 @@ function animate() {
         es[i].radius <
       1
     ) {
+      background.pause();
       cancelAnimationFrame(animationId);
+      isGameStart = false;
+      death.play();
       clearInterval(powerIntervalId);
       clearInterval(intervalId);
 
@@ -227,6 +364,10 @@ function animate() {
           s += 50;
           score.innerText = s;
 
+          const top = ps[j].y;
+          const left = ps[j].x;
+          createScore({ top, left, score: 50 });
+          damageAudio.play();
           gsap.to(es[i], {
             radius: es[i].radius - 10,
           });
@@ -234,6 +375,23 @@ function animate() {
         } else {
           s += 100;
           score.innerText = s;
+          const top = ps[j].y;
+          const left = ps[j].x;
+          createScore({ top, left, score: 100 });
+
+          const color = es[i].color;
+          for (const back of backgrounds) {
+            gsap.set(back, {
+              color: "white",
+              alpha: 1,
+            });
+
+            gsap.to(back, {
+              color,
+              alpha: 0.1,
+            });
+          }
+          explode.play();
           ps.splice(j, 1);
           es.splice(i, 1);
         }
@@ -243,6 +401,8 @@ function animate() {
 }
 
 window.addEventListener("click", (event) => {
+  if (!isGameStart) return;
+  shootAudio.play();
   const fromX = player.x;
   const fromY = player.y;
 
@@ -281,5 +441,21 @@ window.addEventListener("keydown", (event) => {
       break;
     default:
       break;
+  }
+});
+
+window.addEventListener("mousemove", (event) => {
+  mouseDirection.x = event.clientX;
+  mouseDirection.y = event.clientY;
+});
+
+document.addEventListener("visibilitychange", (event) => {
+  if (document.hidden) {
+    clearInterval(intervalId);
+    clearInterval(powerIntervalId);
+    clearInterval(machineGunId);
+  } else {
+    addEnemy();
+    addPowerUp();
   }
 });

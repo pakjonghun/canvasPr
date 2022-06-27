@@ -139,3 +139,10 @@ Math를 써먹을 곳이 이렇게 많다니... 많이 놀라웠고 신기했다
   c.drawImage(this.img, this.position.x, this.position.y);
   c.restore();
 ```
+
+## 요소 없애기
+
+```
+//그 요소의 부모에게 가서 자식 중 자신을 없애라고 하면됨.
+ele.parentNode.removeChild(ele)
+```

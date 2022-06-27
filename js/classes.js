@@ -3,6 +3,7 @@ class Player {
   y;
   radius;
   color;
+  powerUp;
   constructor({ x, y, radius, color }) {
     this.x = x;
     this.y = y;
@@ -63,9 +64,9 @@ class Partical {
 
   draw() {
     c.save();
-    c.globalAlpha = this.alpha;
     c.beginPath();
     c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+    c.globalAlpha = this.alpha;
     c.fillStyle = this.color;
     c.fill();
     c.restore();
@@ -140,8 +141,9 @@ class PowerUp {
     this.radians = 0;
     gsap.to(this, {
       alpha: 0,
-      duration: 2,
+      duration: 0.5,
       repeat: -1,
+      ease: "linear",
     });
   }
 
@@ -166,5 +168,24 @@ class PowerUp {
     this.radians += 0.01;
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
+  }
+}
+
+class Background {
+  constructor({ position: { x, y }, color, radius }) {
+    this.position = { x, y };
+    this.color = color;
+    this.alpha = 0.1;
+    this.radius = radius;
+  }
+
+  draw() {
+    c.save();
+    c.globalAlpha = this.alpha;
+    c.beginPath();
+    c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2, false);
+    c.fillStyle = this.color;
+    c.fill();
+    c.restore();
   }
 }
